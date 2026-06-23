@@ -52,3 +52,14 @@ stock:
   sentiment_positive_threshold: 0.65
   sentiment_surge_count: 20
   check_interval_minutes: 30
+
+# ── AI 도구 선언 ──────────────────────────────────────────────────
+#  사용할 AI CLI 도구를 지정합니다.
+#  bootstrap.py 실행 시 .harness/{ai}/ 의 가이드 파일을
+#  프로젝트 루트에 자동으로 복사합니다.
+#
+#  claude  → CLAUDE.md  (Claude Code)
+#  codex   → AGENTS.md  (OpenAI Codex)
+#  gemini  → GEMINI.md  (Google Gemini CLI)
+harness:
+  ai: "claude"

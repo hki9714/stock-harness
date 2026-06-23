@@ -492,5 +492,39 @@ docker compose logs app   # 에러 메시지 확인
 
 ---
 
+## 14. IntelliJ 기준으로 project 관리하는 방법을 간단하게 정리할게요.
+
+### `Python 플러그인 확인`
+   File → Settings → Plugins → "Python" 검색
+   → 설치되어 있으면 OK
+   → 없으면 Install → IDE 재시작
+
+### `프로젝트 열기`
+   File → Open → stock-harness 폴더 선택 → OK
+
+### `Python 인터프리터 설정`
+   처음엔 venv가 없으니 시스템 Python을 먼저 지정해요.
+   File → Project Structure → SDK → + → Python SDK
+   → System Interpreter 선택
+   → python.exe (Windows) 또는 python3 (Mac/Linux) 선택
+   → OK
+
+### `run.py 최초 실행 (venv 자동 생성)`
+   run.py 우클릭 → Run 'run'
+   이때 venv가 자동 생성되고 패키지가 설치돼요. 5~10분 소요.
+
+### `인터프리터를 venv로 교체`
+   venv 생성 완료 후 IntelliJ 인터프리터를 venv로 바꿔야 코드 자동완성이 제대로 돼요.
+   File → Project Structure → SDK → + → Python SDK
+   → Existing Environment 선택
+   → venv/Scripts/python.exe     (Windows)
+   venv/bin/python             (Mac/Linux)
+   → OK
+   또는 IntelliJ 우하단 Python 버전 표시 클릭 → Interpreter Settings → 위와 동일하게 진행
+
+### `이후 실행`
+   run.py 우클릭 → Run 'run'
+   매번 이것만 하면 돼요.
+
 > ⚠️ 본 시스템은 참고용입니다. 투자 판단은 본인 책임입니다.
 > 네이버 토론 크롤링 시 서비스 이용약관을 확인하세요.

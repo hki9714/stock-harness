@@ -12,6 +12,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -76,7 +77,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Stock Analysis Harness", lifespan=lifespan)
 
-# CORS (Nginx가 처리하지만 직접 접근 대비)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -130,18 +130,12 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 @app.post("/api/chat")
 async def proxy_claude(request: Request):
-    """
-    Dev Console → 이 엔드포인트 → Anthropic API
-    브라우저 CORS 문제 없이 Claude API 호출 가능
-    """
     body = await request.body()
-
     headers = {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
     }
-
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
@@ -149,26 +143,36 @@ async def proxy_claude(request: Request):
                 content=body,
                 headers=headers,
             )
-        return JSONResponse(
-            content=resp.json(),
-            status_code=resp.status_code,
-        )
+        return JSONResponse(content=resp.json(), status_code=resp.status_code)
     except Exception as e:
         logger.error(f"[Claude 프록시] 오류: {e}")
-        return JSONResponse(
-            content={"error": {"message": str(e)}},
-            status_code=500,
-        )
+        return JSONResponse(content={"error": {"message": str(e)}}, status_code=500)
 
 
 @app.get("/api/settings")
 async def get_ai_settings():
-    """현재 AI 설정 반환 (서버 측 기본값)"""
     return {
         "default_provider": "claude",
         "default_model": "claude-sonnet-4-6",
         "anthropic_api_configured": bool(ANTHROPIC_API_KEY),
     }
+
+
+# ──────────────────────────────────────────
+# 정적 파일 서빙 (Dev Console)
+# 반드시 API 엔드포인트 등록 후 마지막에 위치해야 함
+# ──────────────────────────────────────────
+
+import pathlib
+from fastapi.responses import FileResponse
+
+UI_DIR = pathlib.Path(__file__).parent / "ui"
+
+@app.get("/")
+async def dev_console():
+    return FileResponse(str(UI_DIR / "dev_console.html"))
+
+app.mount("/ui", StaticFiles(directory=str(UI_DIR)), name="ui")
 
 
 if __name__ == "__main__":

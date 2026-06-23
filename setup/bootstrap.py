@@ -459,6 +459,15 @@ def main():
     gen_env(cfg)
     gen_gitignore()
 
+    # AI 도구 가이드 파일 루트에 배포
+    try:
+        import sys
+        sys.path.insert(0, str(ROOT / ".harness"))
+        from harness import deploy, current_ai
+        deploy(current_ai(cfg))
+    except Exception as e:
+        print(f"  ⚠️  AI 가이드 파일 배포 실패: {e}")
+
     # 환경별 분기
     if runtime == "local":
         setup_local(cfg)
