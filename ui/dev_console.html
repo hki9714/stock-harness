@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Harness — Dev Console</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0f1117; --bg2:#1a1d2e; --bg3:#242740; --border:#2e3254;
+    --text:#e2e4f0; --muted:#8890b0;
+    --accent:#7c6cf0; --accent2:#5b8af0;
+    --green:#3dd68c; --red:#f06464; --amber:#f0a840;
+    --mono:'JetBrains Mono','Fira Code',monospace;
+  }
+  body {
+    font-family:-apple-system,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--text);
+    height:100vh;
+    display:grid;
+    grid-template-rows:48px 1fr;
+    grid-template-columns:260px 1fr 360px;
+    overflow:hidden;
+  }
+
+  /* ── 헤더 ── */
+  header {
+    grid-column:1/-1; background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; padding:0 20px; gap:12px;
+  }
+  header h1 { font-size:15px; font-weight:600; }
+  header h1 span { color:var(--accent); }
+  .hbadges { display:flex; gap:8px; margin-left:auto; align-items:center; }
+  .badge {
+    font-size:11px; padding:3px 10px; border-radius:20px;
+    font-weight:500; border:1px solid; white-space:nowrap;
+  }
+  .badge.green  { color:var(--green);  border-color:var(--green);  background:#3dd68c18; }
+  .badge.amber  { color:var(--amber);  border-color:var(--amber);  background:#f0a84018; }
+  .badge.purple { color:var(--accent); border-color:var(--accent); background:#7c6cf018; }
+  .badge.blue   { color:var(--accent2);border-color:var(--accent2);background:#5b8af018; }
+
+  /* ── 헤더 탭 ── */
+  .htabs { display:flex; gap:2px; margin-left:24px; }
+  .htab {
+    padding:6px 16px; border-radius:6px; font-size:13px;
+    cursor:pointer; color:var(--muted); border:1px solid transparent;
+    transition:all .15s;
+  }
+  .htab:hover { color:var(--text); background:var(--bg3); }
+  .htab.active { color:var(--accent); background:var(--accent)18; border-color:var(--accent)44; }
+
+  /* ── 좌측 파일 탐색기 ── */
+  aside {
+    background:var(--bg2); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .panel-title {
+    font-size:11px; font-weight:600; color:var(--muted);
+    letter-spacing:.08em; text-transform:uppercase;
+    padding:12px 16px 8px;
+  }
+  #file-tree { flex:1; overflow-y:auto; padding:0 8px 12px; }
+  .file-item {
+    display:flex; align-items:center; gap:8px;
+    padding:5px 10px; border-radius:6px; cursor:pointer;
+    font-size:13px; color:var(--muted); transition:all .15s;
+  }
+  .file-item:hover { background:var(--bg3); color:var(--text); }
+  .file-item.active { background:var(--accent)22; color:var(--accent); }
+  .file-item .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .dot.modified { background:var(--amber); }
+  .dot.clean    { background:var(--muted); opacity:.4; }
+  .dot.new      { background:var(--green); }
+  .aside-footer { padding:12px; border-top:1px solid var(--border); }
+  #commit-msg {
+    width:100%; margin-bottom:8px; padding:6px 10px;
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:6px; color:var(--text); font-size:12px; outline:none;
+  }
+  #commit-msg::placeholder { color:var(--muted); }
+  #git-commit-btn {
+    width:100%; padding:8px; border-radius:8px;
+    background:var(--accent); color:#fff;
+    border:none; font-size:13px; font-weight:500;
+    cursor:pointer; transition:opacity .15s;
+  }
+  #git-commit-btn:hover { opacity:.85; }
+
+  /* ── 뷰 컨테이너 ── */
+  #view-chat, #view-settings {
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  #view-settings { display:none; overflow-y:auto; padding:28px 32px; background:var(--bg); }
+
+  /* ── AI 채팅 ── */
+  #chat-area {
+    flex:1; overflow-y:auto; padding:20px;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .msg { display:flex; flex-direction:column; gap:6px; }
+  .msg.user { align-items:flex-end; }
+  .msg.assistant { align-items:flex-start; }
+  .msg-bubble {
+    padding:10px 14px; border-radius:12px;
+    font-size:14px; line-height:1.6; max-width:85%;
+  }
+  .user .msg-bubble {
+    background:var(--accent); color:#fff; border-radius:12px 12px 2px 12px;
+  }
+  .assistant .msg-bubble {
+    background:var(--bg2); color:var(--text);
+    border:1px solid var(--border); border-radius:12px 12px 12px 2px;
+  }
+  .msg-bubble pre {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; padding:12px; margin:8px 0;
+    font-family:var(--mono); font-size:12px; overflow-x:auto; white-space:pre;
+  }
+  .msg-bubble code:not(pre code) {
+    background:var(--bg3); padding:1px 5px; border-radius:4px;
+    font-family:var(--mono); font-size:12px; color:var(--accent2);
+  }
+  .apply-btn {
+    margin-top:6px; padding:5px 14px;
+    background:var(--green)22; color:var(--green);
+    border:1px solid var(--green); border-radius:6px;
+    font-size:12px; cursor:pointer; transition:background .15s;
+  }
+  .apply-btn:hover { background:var(--green)40; }
+  .typing-indicator {
+    display:flex; gap:5px; padding:12px 16px;
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:12px 12px 12px 2px; width:fit-content;
+  }
+  .typing-indicator span {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--muted); animation:bounce .9s infinite;
+  }
+  .typing-indicator span:nth-child(2){animation-delay:.15s}
+  .typing-indicator span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  .chat-input-row {
+    padding:16px; border-top:1px solid var(--border);
+    display:flex; gap:10px; align-items:flex-end;
+  }
+  #user-input {
+    flex:1; background:var(--bg2); border:1px solid var(--border);
+    border-radius:10px; padding:10px 14px; color:var(--text);
+    font-size:14px; resize:none; outline:none;
+    max-height:120px; overflow-y:auto;
+    font-family:inherit; line-height:1.5; transition:border-color .15s;
+  }
+  #user-input:focus { border-color:var(--accent); }
+  #user-input::placeholder { color:var(--muted); }
+  #send-btn {
+    padding:10px 20px; background:var(--accent); color:#fff;
+    border:none; border-radius:10px; font-size:14px;
+    font-weight:500; cursor:pointer; transition:opacity .15s; white-space:nowrap;
+  }
+  #send-btn:hover{opacity:.85} #send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ── 우측 파일뷰 ── */
+  #file-panel {
+    background:var(--bg2); border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .file-panel-header {
+    padding:10px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  #file-name { font-size:13px; color:var(--text); font-family:var(--mono); }
+  #file-content {
+    flex:1; overflow-y:auto; padding:16px;
+    font-family:var(--mono); font-size:12px;
+    color:var(--text); line-height:1.7; white-space:pre; tab-size:4;
+  }
+  #git-log { max-height:160px; overflow-y:auto; border-top:1px solid var(--border); padding:10px 16px; }
+  .git-entry { font-size:11px; font-family:var(--mono); color:var(--muted); padding:3px 0; border-bottom:1px solid var(--border)55; }
+  .git-entry .sha { color:var(--accent2); margin-right:8px; }
+  .git-entry .ts  { color:var(--muted); margin-left:8px; font-size:10px; }
+
+  /* ── AI 설정 화면 ── */
+  .settings-section {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:12px; padding:24px; margin-bottom:20px;
+  }
+  .settings-section h2 {
+    font-size:14px; font-weight:600; color:var(--text);
+    margin-bottom:16px; display:flex; align-items:center; gap:8px;
+  }
+  .settings-section h2 .tag {
+    font-size:10px; padding:2px 8px; border-radius:10px;
+    background:var(--accent)30; color:var(--accent); font-weight:500;
+  }
+
+  /* 프로바이더 카드 그리드 */
+  .provider-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .provider-card {
+    border:2px solid var(--border); border-radius:10px; padding:16px;
+    cursor:pointer; transition:all .2s; position:relative;
+    background:var(--bg3);
+  }
+  .provider-card:hover { border-color:var(--accent)66; background:var(--accent)08; }
+  .provider-card.selected { border-color:var(--accent); background:var(--accent)12; }
+  .provider-card .pname { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+  .provider-card .pdesc { font-size:12px; color:var(--muted); line-height:1.4; }
+  .provider-card .pcheck {
+    position:absolute; top:12px; right:12px;
+    width:18px; height:18px; border-radius:50%;
+    border:2px solid var(--border); background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s;
+  }
+  .provider-card.selected .pcheck {
+    background:var(--accent); border-color:var(--accent);
+  }
+  .provider-card.selected .pcheck::after {
+    content:''; width:6px; height:6px; border-radius:50%; background:#fff;
+  }
+  .provider-card .pbadge {
+    display:inline-block; font-size:10px; padding:2px 7px;
+    border-radius:8px; margin-top:8px; font-weight:500;
+  }
+  .pbadge.default { background:#3dd68c22; color:var(--green); border:1px solid var(--green)66; }
+  .pbadge.beta    { background:#f0a84022; color:var(--amber); border:1px solid var(--amber)66; }
+  .pbadge.local   { background:#5b8af022; color:var(--accent2); border:1px solid var(--accent2)66; }
+
+  /* 모델 선택 */
+  .model-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .model-card {
+    border:2px solid var(--border); border-radius:8px; padding:12px;
+    cursor:pointer; transition:all .2s; background:var(--bg3);
+  }
+  .model-card:hover { border-color:var(--accent)55; }
+  .model-card.selected { border-color:var(--accent); background:var(--accent)10; }
+  .model-card.disabled { opacity:.4; cursor:not-allowed; }
+  .model-card .mname { font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px; }
+  .model-card .mcode { font-size:10px; color:var(--muted); font-family:var(--mono); margin-bottom:6px; }
+  .model-card .mtags { display:flex; flex-wrap:wrap; gap:4px; }
+  .model-card .mtag {
+    font-size:10px; padding:1px 6px; border-radius:6px;
+    background:var(--bg); border:1px solid var(--border); color:var(--muted);
+  }
+  .mtag.best  { background:#3dd68c18; color:var(--green);  border-color:var(--green)44; }
+  .mtag.fast  { background:#5b8af018; color:var(--accent2);border-color:var(--accent2)44; }
+  .mtag.heavy { background:#f0a84018; color:var(--amber);  border-color:var(--amber)44; }
+  .mtag.cheap { background:#7c6cf018; color:var(--accent); border-color:var(--accent)44; }
+
+  /* 파라미터 슬라이더 */
+  .param-row {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 0; border-bottom:1px solid var(--border)55;
+  }
+  .param-row:last-child { border-bottom:none; }
+  .param-label { font-size:13px; color:var(--text); min-width:120px; }
+  .param-desc  { font-size:11px; color:var(--muted); margin-top:2px; }
+  .param-input-wrap { flex:1; display:flex; align-items:center; gap:12px; }
+  .param-row input[type=range] {
+    flex:1; accent-color:var(--accent); height:4px; cursor:pointer;
+  }
+  .param-val {
+    font-size:13px; font-family:var(--mono); color:var(--accent);
+    min-width:36px; text-align:right;
+  }
+  .param-row input[type=text], .param-row input[type=number] {
+    flex:1; padding:6px 10px; background:var(--bg3);
+    border:1px solid var(--border); border-radius:6px;
+    color:var(--text); font-size:13px; outline:none; font-family:var(--mono);
+  }
+  .param-row input:focus { border-color:var(--accent); }
+  .param-row input::placeholder { color:var(--muted); }
+
+  /* 토글 스위치 */
+  .toggle-wrap { display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .toggle-track {
+    width:36px; height:20px; border-radius:10px;
+    background:var(--border); position:relative; transition:background .2s;
+  }
+  .toggle-track.on { background:var(--accent); }
+  .toggle-knob {
+    position:absolute; top:3px; left:3px;
+    width:14px; height:14px; border-radius:50%; background:#fff;
+    transition:transform .2s;
+  }
+  .toggle-track.on .toggle-knob { transform:translateX(16px); }
+
+  /* 저장 버튼 */
+  .save-row { display:flex; gap:10px; margin-top:4px; }
+  .btn-primary {
+    padding:9px 22px; background:var(--accent); color:#fff;
+    border:none; border-radius:8px; font-size:13px; font-weight:500;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .btn-primary:hover { opacity:.85; }
+  .btn-ghost {
+    padding:9px 18px; background:transparent; color:var(--muted);
+    border:1px solid var(--border); border-radius:8px;
+    font-size:13px; cursor:pointer; transition:all .15s;
+  }
+  .btn-ghost:hover { color:var(--text); border-color:var(--text)44; }
+  .save-msg { font-size:12px; color:var(--green); align-self:center; opacity:0; transition:opacity .3s; }
+
+  /* API Key 입력 */
+  .key-row { position:relative; }
+  .key-row input { padding-right:80px !important; }
+  .key-toggle {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    font-size:11px; color:var(--muted); cursor:pointer;
+    background:var(--bg3); padding:2px 8px; border-radius:4px;
+    border:1px solid var(--border);
+  }
+  .key-toggle:hover { color:var(--text); }
+
+  /* 현재 설정 요약 (우측 패널 상단) */
+  #ai-summary {
+    padding:14px 16px; border-bottom:1px solid var(--border);
+    background:var(--bg3);
+  }
+  .summary-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; }
+  .summary-label { font-size:11px; color:var(--muted); }
+  .summary-val { font-size:11px; color:var(--text); font-family:var(--mono); }
+  .summary-val.highlight { color:var(--accent); }
+
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <h1>Stock Harness <span>Dev Console</span></h1>
+  <div class="htabs">
+    <div class="htab active" onclick="switchView('chat')" id="tab-chat">💬 AI 채팅</div>
+    <div class="htab" onclick="switchView('settings')" id="tab-settings">⚙️ AI 설정</div>
+  </div>
+  <div class="hbadges">
+    <span class="badge purple" id="badge-provider">Claude (Anthropic)</span>
+    <span class="badge blue"   id="badge-model">claude-sonnet-4-6</span>
+    <span class="badge amber"  id="badge-git">🔄 git ready</span>
+    <span class="badge green"  id="badge-branch">⎇ main</span>
+  </div>
+</header>
+
+<!-- 좌측 파일 탐색기 -->
+<aside>
+  <div class="panel-title">프로젝트 파일</div>
+  <div id="file-tree"></div>
+  <div class="aside-footer">
+    <input id="commit-msg" placeholder="커밋 메시지 (비우면 자동)">
+    <button id="git-commit-btn">↑ GitHub Push</button>
+  </div>
+</aside>
+
+<!-- 중앙: 채팅 뷰 -->
+<div id="view-chat">
+  <div id="chat-area"></div>
+  <div class="chat-input-row">
+    <textarea id="user-input" rows="1"
+      placeholder="구현할 기능을 설명하세요. 예: '거래량 조건 5배로 올려줘'"></textarea>
+    <button id="send-btn">전송 ↵</button>
+  </div>
+</div>
+
+<!-- 중앙: AI 설정 뷰 -->
+<div id="view-settings">
+
+  <!-- 1. AI 프로바이더 -->
+  <div class="settings-section">
+    <h2>AI 프로바이더 <span class="tag">기본값</span></h2>
+    <div class="provider-grid">
+      <div class="provider-card selected" id="pcard-claude" onclick="selectProvider('claude')">
+        <div class="pcheck"></div>
+        <div class="pname">🟣 Claude (Anthropic)</div>
+        <div class="pdesc">Sonnet·Opus 등 고성능 모델. Claude Code 공식 API 사용.</div>
+        <span class="pbadge default">기본값</span>
+      </div>
+      <div class="provider-card" id="pcard-openai" onclick="selectProvider('openai')">
+        <div class="pcheck"></div>
+        <div class="pname">🟢 OpenAI</div>
+        <div class="pdesc">GPT-4o, o1 등. OpenAI API Key 필요.</div>
+        <span class="pbadge beta">선택</span>
+      </div>
+      <div class="provider-card" id="pcard-gemini" onclick="selectProvider('gemini')">
+        <div class="pcheck"></div>
+        <div class="pname">🔵 Google Gemini</div>
+        <div class="pdesc">Gemini 1.5 Pro·Flash. Google AI Studio Key 필요.</div>
+        <span class="pbadge beta">선택</span>
+      </div>
+      <div class="provider-card" id="pcard-ollama" onclick="selectProvider('ollama')">
+        <div class="pcheck"></div>
+        <div class="pname">⚫ Ollama (로컬)</div>
+        <div class="pdesc">로컬 LLM (Llama3, Mistral 등). 인터넷 불필요.</div>
+        <span class="pbadge local">로컬</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 모델 선택 -->
+  <div class="settings-section">
+    <h2>모델 선택 <span class="tag" id="model-section-tag">Claude</span></h2>
+    <div class="model-grid" id="model-grid"></div>
+  </div>
+
+  <!-- 3. API 키 -->
+  <div class="settings-section">
+    <h2>API 키 / 엔드포인트</h2>
+    <div class="param-row key-row" id="apikey-row">
+      <div>
+        <div class="param-label">API Key</div>
+        <div class="param-desc" id="apikey-desc">Anthropic Console에서 발급</div>
+      </div>
+      <div class="param-input-wrap" style="position:relative;">
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1;padding:6px 80px 6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;font-family:var(--mono);">
+        <span class="key-toggle" onclick="toggleKeyVis()">보기</span>
+      </div>
+    </div>
+    <div class="param-row" id="endpoint-row" style="display:none">
+      <div>
+        <div class="param-label">엔드포인트</div>
+        <div class="param-desc">Ollama 서버 주소</div>
+      </div>
+      <div class="param-input-wrap">
+        <input type="text" id="endpoint-input" placeholder="http://localhost:11434" value="http://localhost:11434">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 파라미터 -->
+  <div class="settings-section">
+    <h2>파라미터 튜닝</h2>
+    <div class="param-row">
+      <div>
+        <div class="param-label">Temperature</div>
+        <div class="param-desc">창의성 ↕ 일관성 (코드 생성 권장: 0.2~0.5)</div>
+      </div>
+      <div class="param-input-wrap">
+        <input type="range" id="sl-temp" min="0" max="1" step="0.05" value="0.3"
+          oninput="document.getElementById('val-temp').textContent=this.value">
+        <span class="param-val" id="val-temp">0.3</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">Max Tokens</div>
+        <div class="param-desc">응답 최대 길이</div>
+      </div>
+      <div class="param-input-wrap">
+        <input type="range" id="sl-tokens" min="256" max="8192" step="256" value="4096"
+          oninput="document.getElementById('val-tokens').textContent=this.value">
+        <span class="param-val" id="val-tokens">4096</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">Context 유지</div>
+        <div class="param-desc">이전 대화 기억 (꺼두면 매 요청 독립)</div>
+      </div>
+      <div class="param-input-wrap">
+        <div class="toggle-wrap" onclick="toggleParam('keep-ctx')">
+          <div class="toggle-track on" id="toggle-keep-ctx"><div class="toggle-knob"></div></div>
+          <span style="font-size:13px;color:var(--muted)" id="label-keep-ctx">켜짐</span>
+        </div>
+      </div>
+    </div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">스트리밍</div>
+        <div class="param-desc">응답을 실시간으로 표시</div>
+      </div>
+      <div class="param-input-wrap">
+        <div class="toggle-wrap" onclick="toggleParam('streaming')">
+          <div class="toggle-track on" id="toggle-streaming"><div class="toggle-knob"></div></div>
+          <span style="font-size:13px;color:var(--muted)" id="label-streaming">켜짐</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 저장 -->
+  <div class="save-row">
+    <button class="btn-primary" onclick="saveSettings()">✅ 설정 저장</button>
+    <button class="btn-ghost"   onclick="resetSettings()">↺ 초기화</button>
+    <span class="save-msg" id="save-msg">저장 완료!</span>
+  </div>
+</div>
+
+<!-- 우측: 파일뷰 + AI 요약 -->
+<div id="file-panel">
+  <div id="ai-summary">
+    <div class="summary-row">
+      <span class="summary-label">프로바이더</span>
+      <span class="summary-val highlight" id="sum-provider">Claude (Anthropic)</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">모델</span>
+      <span class="summary-val highlight" id="sum-model">claude-sonnet-4-6</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Temperature</span>
+      <span class="summary-val" id="sum-temp">0.3</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Max Tokens</span>
+      <span class="summary-val" id="sum-tokens">4096</span>
+    </div>
+  </div>
+  <div class="file-panel-header">
+    <span id="file-name">파일을 선택하세요</span>
+  </div>
+  <div id="file-content" style="color:#8890b0;padding:24px;font-family:sans-serif;font-size:13px;">
+    좌측 파일 목록에서 파일을 클릭하면 내용이 표시됩니다.
+  </div>
+  <div class="panel-title" style="padding:10px 16px 4px;">Git 커밋 로그</div>
+  <div id="git-log"></div>
+</div>
+
+<script>
+// ────────────────────────────────────────
+// 모델 카탈로그
+// ────────────────────────────────────────
+const MODEL_CATALOG = {
+  claude: [
+    { id:"claude-sonnet-4-6",   name:"Claude Sonnet 4.6", tags:["best","균형"], default:true },
+    { id:"claude-opus-4-6",     name:"Claude Opus 4.6",   tags:["heavy","최고성능"] },
+    { id:"claude-haiku-4-5-20251001", name:"Claude Haiku 4.5", tags:["fast","cheap"] },
+  ],
+  openai: [
+    { id:"gpt-4o",       name:"GPT-4o",       tags:["best","균형"], default:true },
+    { id:"gpt-4o-mini",  name:"GPT-4o mini",  tags:["fast","cheap"] },
+    { id:"o1-preview",   name:"o1 preview",   tags:["heavy","추론"] },
+  ],
+  gemini: [
+    { id:"gemini-1.5-pro",   name:"Gemini 1.5 Pro",   tags:["best"], default:true },
+    { id:"gemini-1.5-flash", name:"Gemini 1.5 Flash",  tags:["fast","cheap"] },
+    { id:"gemini-2.0-flash", name:"Gemini 2.0 Flash",  tags:["fast","best"] },
+  ],
+  ollama: [
+    { id:"llama3:8b",   name:"Llama 3 8B",   tags:["fast","local"], default:true },
+    { id:"llama3:70b",  name:"Llama 3 70B",  tags:["heavy","local"] },
+    { id:"mistral:7b",  name:"Mistral 7B",   tags:["fast","local"] },
+  ],
+};
+
+const PROVIDER_LABELS = {
+  claude:"Claude (Anthropic)", openai:"OpenAI",
+  gemini:"Google Gemini", ollama:"Ollama (로컬)"
+};
+const APIKEY_DESCS = {
+  claude:"Anthropic Console → console.anthropic.com",
+  openai:"OpenAI Platform → platform.openai.com",
+  gemini:"Google AI Studio → aistudio.google.com",
+  ollama:"(API Key 불필요)",
+};
+
+// ────────────────────────────────────────
+// 설정 상태
+// ────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  provider:"claude",
+  model:"claude-sonnet-4-6",
+  apiKey:"",
+  endpoint:"http://localhost:11434",
+  temperature:0.3,
+  maxTokens:4096,
+  keepContext:true,
+  streaming:true,
+};
+
+let S = loadSettings();
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem("ai_settings");
+    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+  } catch { return { ...DEFAULT_SETTINGS }; }
+}
+
+function saveSettings() {
+  S.temperature  = parseFloat(document.getElementById("sl-temp").value);
+  S.maxTokens    = parseInt(document.getElementById("sl-tokens").value);
+  S.apiKey       = document.getElementById("api-key-input").value;
+  S.endpoint     = document.getElementById("endpoint-input").value;
+  localStorage.setItem("ai_settings", JSON.stringify(S));
+  updateSummaryBar();
+  const msg = document.getElementById("save-msg");
+  msg.style.opacity = "1";
+  setTimeout(() => msg.style.opacity = "0", 2000);
+}
+
+function resetSettings() {
+  if (!confirm("설정을 초기값으로 되돌릴까요?")) return;
+  S = { ...DEFAULT_SETTINGS };
+  localStorage.removeItem("ai_settings");
+  applySettingsToUI();
+}
+
+// ────────────────────────────────────────
+// 프로바이더 / 모델 선택
+// ────────────────────────────────────────
+function selectProvider(key) {
+  S.provider = key;
+  document.querySelectorAll(".provider-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("pcard-"+key).classList.add("selected");
+
+  // 모델 그리드 재렌더
+  S.model = MODEL_CATALOG[key].find(m => m.default)?.id || MODEL_CATALOG[key][0].id;
+  document.getElementById("model-section-tag").textContent = PROVIDER_LABELS[key];
+  renderModelGrid(key);
+
+  // API Key / 엔드포인트 토글
+  document.getElementById("apikey-desc").textContent = APIKEY_DESCS[key];
+  document.getElementById("api-key-input").placeholder =
+    key === "claude"  ? "sk-ant-..."   :
+    key === "openai"  ? "sk-..."       :
+    key === "gemini"  ? "AIza..."      : "(불필요)";
+  document.getElementById("endpoint-row").style.display = key === "ollama" ? "flex" : "none";
+  document.getElementById("api-key-input").disabled = key === "ollama";
+
+  updateSummaryBar();
+}
+
+function selectModel(id) {
+  S.model = id;
+  document.querySelectorAll(".model-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("mcard-"+id).classList.add("selected");
+  updateSummaryBar();
+}
+
+function renderModelGrid(providerKey) {
+  const grid = document.getElementById("model-grid");
+  const models = MODEL_CATALOG[providerKey];
+  grid.innerHTML = models.map(m => `
+    <div class="model-card ${m.id===S.model?'selected':''}"
+         id="mcard-${m.id}" onclick="selectModel('${m.id}')">
+      <div class="mname">${m.name}</div>
+      <div class="mcode">${m.id}</div>
+      <div class="mtags">${m.tags.map(t => `<span class="mtag ${t}">${t}</span>`).join("")}</div>
+      ${m.default ? '<div style="font-size:10px;color:var(--green);margin-top:6px">★ 기본값</div>' : ""}
+    </div>
+  `).join("");
+}
+
+// ────────────────────────────────────────
+// 파라미터 토글
+// ────────────────────────────────────────
+function toggleParam(key) {
+  const track = document.getElementById("toggle-"+key);
+  const label = document.getElementById("label-"+key);
+  const isOn  = track.classList.toggle("on");
+  label.textContent = isOn ? "켜짐" : "꺼짐";
+  if (key === "keep-ctx") S.keepContext = isOn;
+  if (key === "streaming") S.streaming  = isOn;
+}
+
+function toggleKeyVis() {
+  const inp = document.getElementById("api-key-input");
+  inp.type = inp.type === "password" ? "text" : "password";
+}
+
+// ────────────────────────────────────────
+// 요약 바 / 뱃지 업데이트
+// ────────────────────────────────────────
+function updateSummaryBar() {
+  const pLabel = PROVIDER_LABELS[S.provider];
+  document.getElementById("sum-provider").textContent = pLabel;
+  document.getElementById("sum-model").textContent    = S.model;
+  document.getElementById("sum-temp").textContent     = S.temperature;
+  document.getElementById("sum-tokens").textContent   = S.maxTokens;
+  document.getElementById("badge-provider").textContent = pLabel;
+  document.getElementById("badge-model").textContent    = S.model;
+}
+
+function applySettingsToUI() {
+  selectProvider(S.provider);
+  document.getElementById("sl-temp").value   = S.temperature;
+  document.getElementById("val-temp").textContent = S.temperature;
+  document.getElementById("sl-tokens").value = S.maxTokens;
+  document.getElementById("val-tokens").textContent = S.maxTokens;
+  document.getElementById("api-key-input").value = S.apiKey || "";
+  document.getElementById("endpoint-input").value = S.endpoint;
+  const ctxTrack = document.getElementById("toggle-keep-ctx");
+  const ctxLabel = document.getElementById("label-keep-ctx");
+  if (!S.keepContext) { ctxTrack.classList.remove("on"); ctxLabel.textContent="꺼짐"; }
+  const stTrack = document.getElementById("toggle-streaming");
+  const stLabel = document.getElementById("label-streaming");
+  if (!S.streaming)   { stTrack.classList.remove("on");  stLabel.textContent="꺼짐"; }
+  updateSummaryBar();
+}
+
+// ────────────────────────────────────────
+// 뷰 전환 (채팅 ↔ 설정)
+// ────────────────────────────────────────
+function switchView(view) {
+  document.getElementById("view-chat").style.display     = view==="chat"     ? "flex"  : "none";
+  document.getElementById("view-settings").style.display = view==="settings" ? "block" : "none";
+  document.getElementById("tab-chat").classList.toggle("active",     view==="chat");
+  document.getElementById("tab-settings").classList.toggle("active", view==="settings");
+}
+
+// ────────────────────────────────────────
+// 파일 트리
+// ────────────────────────────────────────
+const PROJECT_FILES = {
+  "main.py":{status:"clean"},"models/config.py":{status:"clean"},
+  "models/signal.py":{status:"clean"},"crawler/stock_crawler.py":{status:"clean"},
+  "crawler/naver_crawler.py":{status:"clean"},"analyzer/sentiment.py":{status:"clean"},
+  "analyzer/signal_engine.py":{status:"clean"},"scheduler/job.py":{status:"clean"},
+  "bot/telegram_bot.py":{status:"clean"},"utils/git_watcher.py":{status:"clean"},
+  "ui/dev_console.html":{status:"clean"},"requirements.txt":{status:"clean"},
+};
+const FILE_CONTENTS = {};
+let selectedFile = null;
+
+function renderFileTree() {
+  const tree = document.getElementById("file-tree");
+  tree.innerHTML = "";
+  for (const [path, meta] of Object.entries(PROJECT_FILES)) {
+    const el = document.createElement("div");
+    el.className = "file-item"+(selectedFile===path?" active":"");
+    const icon = path.endsWith(".py")?"🐍":path.endsWith(".html")?"🌐":path.endsWith(".sh")?"⚙️":"📝";
+    el.innerHTML = `<span class="dot ${meta.status}"></span>${icon} ${path}`;
+    el.onclick = () => selectFile(path);
+    tree.appendChild(el);
+  }
+}
+
+function selectFile(path) {
+  selectedFile = path;
+  document.getElementById("file-name").textContent = path;
+  const content = FILE_CONTENTS[path] || `// ${path}\n// AI에게 "show ${path}" 라고 요청하세요`;
+  document.getElementById("file-content").textContent = content;
+  renderFileTree();
+}
+
+// ────────────────────────────────────────
+// 채팅 렌더
+// ────────────────────────────────────────
+function appendMsg(role, html, codeBlocks) {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className = "msg "+role;
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble";
+  bubble.innerHTML = html;
+  div.appendChild(bubble);
+  if (codeBlocks?.length) {
+    codeBlocks.forEach(({path,code}) => {
+      const btn = document.createElement("button");
+      btn.className = "apply-btn";
+      btn.textContent = `✅ ${path}에 적용`;
+      btn.onclick = () => { applyCode(path, code, btn); };
+      div.appendChild(btn);
+    });
+  }
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className="msg assistant"; div.id="typing";
+  div.innerHTML=`<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+  area.appendChild(div); area.scrollTop=area.scrollHeight;
+}
+function removeTyping() { document.getElementById("typing")?.remove(); }
+
+function parseResponse(text) {
+  const codeBlocks = [];
+  let html = text;
+  html = html.replace(/```(?:python:([^\n]+)|python|bash)?\n([\s\S]*?)```/g,(_,path,code)=>{
+    if(path) codeBlocks.push({path:path.trim(),code:code.trim()});
+    return `<pre>${escHtml(code.trim())}</pre>`;
+  });
+  html = html.replace(/`([^`]+)`/g,"<code>$1</code>");
+  html = html.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  html = html.replace(/\n/g,"<br>");
+  return {html,codeBlocks};
+}
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ────────────────────────────────────────
+// 코드 적용 + 자동 커밋
+// ────────────────────────────────────────
+function applyCode(path, code, btn) {
+  FILE_CONTENTS[path]=code;
+  if(!PROJECT_FILES[path]) PROJECT_FILES[path]={status:"new"};
+  else PROJECT_FILES[path].status="modified";
+  renderFileTree(); selectFile(path);
+  btn.textContent="✓ 적용됨"; btn.disabled=true; btn.style.opacity=".5";
+  scheduleAutoCommit(path);
+}
+
+let autoCommitTimer=null; const pendingChanges=new Set();
+function scheduleAutoCommit(path) {
+  pendingChanges.add(path);
+  clearTimeout(autoCommitTimer);
+  autoCommitTimer=setTimeout(()=>autoCommit(),30000);
+  document.getElementById("badge-git").textContent=`🟡 ${pendingChanges.size}개 대기`;
+  document.getElementById("badge-git").className="badge amber";
+}
+function autoCommit() {
+  if(!pendingChanges.size) return;
+  doCommit(`auto: AI 수정 - ${Array.from(pendingChanges).join(", ")}`);
+  pendingChanges.clear();
+}
+function doCommit(message) {
+  const sha=Math.random().toString(36).slice(2,9);
+  const ts=new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  const log=document.getElementById("git-log");
+  const entry=document.createElement("div");
+  entry.className="git-entry";
+  entry.innerHTML=`<span class="sha">${sha}</span>${escHtml(message)}<span class="ts">${ts}</span>`;
+  log.prepend(entry);
+  document.getElementById("badge-git").textContent="✅ pushed";
+  document.getElementById("badge-git").className="badge green";
+  for(const p of Object.keys(PROJECT_FILES)) if(PROJECT_FILES[p].status!=="new") PROJECT_FILES[p].status="clean";
+  renderFileTree();
+  setTimeout(()=>{document.getElementById("badge-git").textContent="🔄 git ready";document.getElementById("badge-git").className="badge amber";},3000);
+}
+
+// ────────────────────────────────────────
+// Claude API 호출 (설정값 반영)
+// ────────────────────────────────────────
+let conversationHistory=[];
+
+const SYSTEM_PROMPT=`당신은 "Stock Harness" Python 주식 분석 프로젝트의 전담 개발 AI입니다.
+프로젝트: FastAPI + pykrx + 네이버토론크롤링 + KR-FinBert 감성분석 + Telegram 봇 + GitHub 자동커밋
+코드 수정 시 반드시 \`\`\`python:파일경로\`\`\` 형식으로 파일명 명시. 한국어로 응답.`;
+
+// API 엔드포인트: 서버 배포시 /api/chat 프록시, 로컬 파일은 직접 호출
+const API_ENDPOINT = (window.location.hostname === "localhost" || window.location.hostname === "")
+  ? "https://api.anthropic.com/v1/messages"
+  : "/api/chat";
+
+async function callClaude(userMsg) {
+  if(S.keepContext) conversationHistory.push({role:"user",content:userMsg});
+  const messages = S.keepContext ? conversationHistory : [{role:"user",content:userMsg}];
+
+  const res = await fetch(API_ENDPOINT,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model: S.model,
+      max_tokens: S.maxTokens,
+      system: SYSTEM_PROMPT,
+      messages,
+    }),
+  });
+  if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||"API 오류"); }
+  const data=await res.json();
+  const text=data.content.map(b=>b.text||"").join("");
+  if(S.keepContext) conversationHistory.push({role:"assistant",content:text});
+  return text;
+}
+
+async function sendMessage() {
+  const input=document.getElementById("user-input");
+  const btn=document.getElementById("send-btn");
+  const text=input.value.trim();
+  if(!text) return;
+  input.value=""; input.style.height="auto"; btn.disabled=true;
+  appendMsg("user",escHtml(text),null);
+  showTyping();
+  try {
+    const reply=await callClaude(text);
+    removeTyping();
+    const {html,codeBlocks}=parseResponse(reply);
+    appendMsg("assistant",html,codeBlocks);
+  } catch(e) {
+    removeTyping();
+    appendMsg("assistant",`<span style="color:#f06464">오류: ${e.message}</span>`,null);
+  } finally { btn.disabled=false; input.focus(); }
+}
+
+// ────────────────────────────────────────
+// 이벤트 / 초기화
+// ────────────────────────────────────────
+document.getElementById("git-commit-btn").onclick=()=>{
+  const msg=document.getElementById("commit-msg").value.trim()||`feat: 수동 커밋 ${new Date().toLocaleString("ko-KR")}`;
+  doCommit(msg); document.getElementById("commit-msg").value="";
+};
+const inputEl=document.getElementById("user-input");
+inputEl.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}});
+inputEl.addEventListener("input",()=>{ inputEl.style.height="auto"; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+"px"; });
+document.getElementById("send-btn").onclick=sendMessage;
+document.getElementById("sl-temp").addEventListener("input",()=>{
+  S.temperature=parseFloat(document.getElementById("sl-temp").value);
+  document.getElementById("sum-temp").textContent=S.temperature;
+});
+document.getElementById("sl-tokens").addEventListener("input",()=>{
+  S.maxTokens=parseInt(document.getElementById("sl-tokens").value);
+  document.getElementById("sum-tokens").textContent=S.maxTokens;
+});
+
+// 초기 렌더
+applySettingsToUI();
+renderFileTree();
+appendMsg("assistant",
+  "안녕하세요! Stock Harness 전담 개발 AI입니다. 🚀<br><br>"+
+  "현재 설정: <code>"+S.provider+" / "+S.model+"</code><br>"+
+  "⚙️ 상단 <strong>AI 설정</strong> 탭에서 모델·프로바이더를 변경할 수 있어요.<br><br>"+
+  "요청 예시:<br>"+
+  "<code>거래량 급등 조건을 5배로 올려줘</code><br>"+
+  "<code>텔레그램 알림 포맷 변경해줘</code><br>"+
+  "<code>scheduler/job.py 전체 보여줘</code>",null);
+</script>
+</body>
+</html>

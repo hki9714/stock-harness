@@ -1,0 +1,27 @@
+# ⚠️ 절대 커밋 금지 - 민감 정보
+.env
+config.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# 로그
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 모델 캐시
+.cache/
