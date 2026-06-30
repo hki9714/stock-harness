@@ -14,7 +14,7 @@ volume surges and buy signals, then sends alerts via Telegram.
 - **Data**: pykrx (stock prices), Naver Finance discussion crawling
 - **AI Analysis**: KR-FinBert-SC sentiment analysis (keyword fallback included)
 - **Alerts**: python-telegram-bot
-- **Dev Console**: ui/dev_console.html (AI API integrated)
+- **Dev Console**: frontend/src/pages/DevConsolePage.jsx (React, AI API integrated)
 - **Git**: Auto-commit on file change via watchdog
 
 ---
@@ -35,7 +35,7 @@ stock-harness/
 ├── scheduler/job.py           # APScheduler job, 60min cooldown
 ├── bot/telegram_bot.py        # Telegram alerts + commands
 ├── utils/git_watcher.py       # watchdog auto Git commit
-└── ui/dev_console.html        # AI-integrated dev console
+└── frontend/src/pages/DevConsolePage.jsx  # React Dev Console
 ```
 
 ---

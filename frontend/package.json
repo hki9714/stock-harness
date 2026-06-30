@@ -1,0 +1,22 @@
+{
+  "name": "stock-harness-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lightweight-charts": "^4.1.3",
+    "recharts": "^2.12.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.0.0"
+  },
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build",
+    "build:console": "vite build --config vite.console.config.js",
+    "preview": "vite preview"
+  }
+}

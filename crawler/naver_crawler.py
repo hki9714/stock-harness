@@ -47,21 +47,16 @@ async def fetch_discussion_posts(
 
             page_has_old = False
             for row in rows:
+                tds      = row.find_all("td")
                 title_td = row.select_one("td.title a")
-                date_td = row.select_one("td.date")
-                if not title_td or not date_td:
+                # 네이버 토론 현재 구조: tds[0]=날짜, tds[1]=제목, tds[2]=작성자, tds[3]=조회, tds[4]=공감
+                if not title_td or len(tds) < 2:
                     continue
 
-                raw_date = date_td.get_text(strip=True)
+                raw_date = tds[0].get_text(strip=True)
                 try:
-                    # 오늘 날짜 + 시간 조합 (네이버 형식: "HH:MM" 또는 "YY.MM.DD")
-                    if "." in raw_date and len(raw_date) > 5:
-                        post_dt = datetime.strptime(
-                            f"{datetime.now().year}.{raw_date}", "%Y.%y.%m.%d"
-                        )
-                    else:
-                        time_part = datetime.strptime(raw_date, "%H:%M").time()
-                        post_dt = datetime.combine(datetime.today(), time_part)
+                    # 네이버 현재 날짜 형식: "YYYY.MM.DD HH:MM"
+                    post_dt = datetime.strptime(raw_date, "%Y.%m.%d %H:%M")
                 except ValueError:
                     continue
 
@@ -70,10 +65,10 @@ async def fetch_discussion_posts(
                     continue
 
                 posts.append({
-                    "title": title_td.get_text(strip=True),
+                    "title":    title_td.get_text(strip=True),
                     "datetime": post_dt,
-                    "views": _parse_int(row.select_one("td.hit")),
-                    "agree": _parse_int(row.select_one("td.num")),
+                    "views":    _parse_int(tds[3]) if len(tds) > 3 else 0,
+                    "agree":    _parse_int(tds[4]) if len(tds) > 4 else 0,
                 })
 
             # 해당 페이지에 오래된 글이 있으면 더 이상 페이징 불필요

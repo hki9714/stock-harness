@@ -15,7 +15,7 @@ volume surges and buy signals, then sends alerts via Telegram.
 - **Data**: pykrx (stock prices), Naver Finance discussion crawling
 - **AI Analysis**: KR-FinBert-SC sentiment analysis (keyword fallback included)
 - **Alerts**: python-telegram-bot
-- **Dev Console**: ui/dev_console.html (Claude API integrated)
+- **Dev Console**: frontend/src/pages/DevConsolePage.jsx (React, Claude API integrated)
 - **Git**: Auto-commit on file change via watchdog
 
 ---
@@ -44,8 +44,8 @@ stock-harness/
 │   └── telegram_bot.py        # Message formatter, /watch /unwatch /status
 ├── utils/
 │   └── git_watcher.py         # watchdog file watcher + auto Git commit
-├── ui/
-│   └── dev_console.html       # Claude API integrated dev console
+├── frontend/src/pages/
+│   └── DevConsolePage.jsx     # React Dev Console (Claude API integrated)
 ├── nginx/
 │   └── nginx.conf             # Reverse proxy (server mode only)
 ├── Dockerfile
@@ -129,7 +129,7 @@ curl http://localhost:8000/watch
 ## Pending / Planned Features
 
 - [ ] Auto stock screening (top N by market cap, KOSPI200, etc.)
-- [ ] FastAPI static file serving for dev_console.html
+- [x] React Dev Console (DevConsolePage.jsx) — replaced dev_console.html
 - [ ] Financial statement analysis (OpenDartReader)
 - [ ] Technical analysis (Golden Cross, RSI)
 - [ ] React web dashboard

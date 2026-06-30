@@ -12,6 +12,7 @@ services:
     volumes:
       - ./logs:/app/logs          # 로그 영속화
       - ./.git:/app/.git          # git 자동 커밋용
+      - ~/.claude:/root/.claude:ro  # Claude Code 인증 토큰 (EC2 홈에서 마운트)
     expose:
       - "8000"
     networks:

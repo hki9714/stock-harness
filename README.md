@@ -35,7 +35,7 @@ bot/telegram_bot.py  →  텔레그램 알림
     ↑
 main.py (FastAPI + APScheduler + Nginx 프록시)
     ↑
-ui/dev_console.html  (Claude AI 연동 개발 콘솔)
+frontend/  (React 대시보드 + Dev Console)
 ```
 
 ### 매수 시그널 조건

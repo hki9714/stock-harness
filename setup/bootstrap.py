@@ -83,6 +83,8 @@ TELEGRAM_BOT_TOKEN={tg['bot_token']}
 TELEGRAM_CHAT_ID={tg['chat_id']}
 
 ANTHROPIC_API_KEY={ai['anthropic_api_key']}
+DEFAULT_PROVIDER={ai.get('default_provider', 'claude')}
+DEFAULT_MODEL={ai.get('default_model', 'claude-sonnet-4-6')}
 
 WATCH_LIST={",".join(st['watch_list'])}
 VOLUME_SURGE_RATIO={st['volume_surge_ratio']}
@@ -254,8 +256,8 @@ http {{
 
         location / {{
             root  /usr/share/nginx/html;
-            index dev_console.html;
-            try_files $uri $uri/ /dev_console.html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
         }}
 
         location /api/ {{
