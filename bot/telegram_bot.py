@@ -43,11 +43,11 @@ def format_volume_alert(alert: VolumeAlert) -> str:
     return (
         f"🔥 *거래량 급등 알림*\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"종목: *{alert.name}* ({alert.code})\n"
-        f"현재가: {alert.price:,.0f}원  {direction} {sign}{alert.change_pct:.1f}%\n"
-        f"거래량: {alert.volume:,}주\n"
-        f"평균 대비: *{alert.volume_ratio:.1f}배*\n"
-        f"⏰ {alert.timestamp.strftime('%H:%M')}"
+        f"종목: *{_esc(alert.name)}* \\({_esc(alert.code)}\\)\n"
+        f"현재가: {_esc(f'{alert.price:,.0f}')}원  {direction} {_esc(f'{sign}{alert.change_pct:.1f}')}%\n"
+        f"거래량: {_esc(f'{alert.volume:,}')}주\n"
+        f"평균 대비: *{_esc(f'{alert.volume_ratio:.1f}')}배*\n"
+        f"⏰ {_esc(alert.timestamp.strftime('%H:%M'))}"
     )
 
 
@@ -127,7 +127,7 @@ async def send_volume_alert(alert: VolumeAlert):
     await bot.send_message(
         chat_id=settings.telegram_chat_id,
         text=format_volume_alert(alert),
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     logger.info(f"[텔레그램] 거래량 급등 알림 발송: {alert.name}")
 

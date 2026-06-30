@@ -1,0 +1,245 @@
+/* ── 오버레이 / 모달 ─────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 16px;
+}
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; width: 660px; max-width: 100%;
+  max-height: 92vh; display: flex; flex-direction: column;
+  box-shadow: 0 24px 72px rgba(0,0,0,.45);
+}
+
+/* ── 헤더 ────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 22px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.headerLeft { display: flex; flex-direction: column; gap: 3px; }
+.title      { font-size: 16px; font-weight: 700; }
+.subtitle   { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.codeTag    {
+  font-family: monospace; font-size: 11px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; color: var(--muted);
+}
+.closeBtn   {
+  background: none; border: none; color: var(--muted);
+  font-size: 24px; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.closeBtn:hover { color: var(--text); }
+
+/* ── 바디 ────────────────────────────────────────────── */
+.body {
+  overflow-y: auto; flex: 1;
+  padding: 20px 22px 24px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* ── 설정 박스 ───────────────────────────────────────── */
+.settingsBox {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.settingsRow    { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.settingsLabel  { font-size: 12px; color: var(--muted); font-weight: 500; width: 52px; flex-shrink: 0; }
+.settingsHint   { font-size: 11px; color: var(--muted); }
+
+.dateRange  { display: flex; align-items: center; gap: 8px; }
+.dateSep    { color: var(--muted); }
+.dateInput  {
+  padding: 7px 10px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 13px; outline: none; cursor: pointer;
+}
+.dateInput:focus { border-color: var(--accent); }
+
+.select {
+  flex: 1; min-width: 180px; padding: 7px 10px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 13px; outline: none; cursor: pointer;
+}
+.select:focus { border-color: var(--accent); }
+
+.signalOptions { display: flex; gap: 20px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border)55; }
+.optRow    { display: flex; align-items: center; gap: 6px; }
+.optLabel  { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.numInput  {
+  width: 58px; padding: 6px 8px; text-align: center;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 13px; outline: none;
+}
+.numInput:focus { border-color: var(--accent); }
+.optUnit   { font-size: 12px; color: var(--muted); }
+
+.runBtn {
+  align-self: flex-start; padding: 9px 22px;
+  background: var(--accent); border: none; border-radius: 8px;
+  color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+}
+.runBtn:hover:not(:disabled) { opacity: .85; }
+.runBtn:disabled { opacity: .45; cursor: default; }
+
+/* ── 오류 ────────────────────────────────────────────── */
+.errorBox {
+  padding: 12px 16px; background: var(--red)11;
+  border: 1px solid var(--red)44; border-radius: 8px;
+  color: var(--red); font-size: 13px;
+}
+
+/* ── 결과 ────────────────────────────────────────────── */
+.results { display: flex; flex-direction: column; gap: 16px; }
+
+/* 현재가 배지 */
+.currentPriceBadge {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--accent)11; border: 1px solid var(--accent)33;
+  border-radius: 8px; padding: 12px 16px;
+}
+.cpLabel { font-size: 12px; color: var(--muted); }
+.cpValue { font-size: 22px; font-weight: 700; color: var(--accent); }
+.cpDate  { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+.sectionTitle {
+  font-size: 12px; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+/* 지표 카드 */
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+@media (max-width: 500px) { .metrics { grid-template-columns: repeat(2,1fr); } }
+.metricCard {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+}
+.metricLabel { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+.metricValue { font-size: 19px; font-weight: 700; line-height: 1.1; }
+.metricSub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* 스파크라인 */
+.sparkWrap  { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.sparkLabel { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.spark      { display: block; width: 100%; height: 52px; }
+.sparkAxis  { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* ── 시나리오 예측 테이블 ─────────────────────────────── */
+.projWrap {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.projTitle    { padding: 12px 16px 2px; font-size: 13px; font-weight: 600; }
+.projSubtitle { padding: 0 16px 10px; font-size: 11px; color: var(--muted); }
+.projTableWrap { overflow-x: auto; }
+.projTable  { width: 100%; border-collapse: collapse; font-size: 13px; }
+.projTable th {
+  padding: 8px 14px; text-align: center; font-size: 11px; font-weight: 600;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border); white-space: nowrap;
+}
+.projTable th:first-child { text-align: left; }
+.projTable td { padding: 10px 14px; border-bottom: 1px solid var(--border)44; }
+.projTable tr:last-child td { border-bottom: none; }
+.projPeriod { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.projCell   { text-align: center; }
+.projPrice  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.projNote   {
+  padding: 8px 16px 10px; font-size: 10px; color: var(--muted);
+  border-top: 1px solid var(--border)55;
+}
+
+/* ── 시그널 상태 배지 ────────────────────────────────── */
+.signalOn {
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--green)11; border: 1px solid var(--green)33;
+  color: var(--green); font-size: 13px; font-weight: 500;
+}
+.signalOff {
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); font-size: 13px;
+}
+
+/* ── 거래 내역 테이블 ────────────────────────────────── */
+.noTrades {
+  padding: 20px; text-align: center; color: var(--muted);
+  font-size: 13px; background: var(--bg3); border-radius: 8px;
+}
+.tableWrap {
+  border: 1px solid var(--border); border-radius: 8px;
+  max-height: 240px; overflow-y: auto; overflow-x: auto;
+}
+.tradeTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tradeTable th {
+  position: sticky; top: 0; background: var(--bg3);
+  padding: 8px 12px; text-align: left; color: var(--muted);
+  font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.tradeTable td { padding: 8px 12px; border-bottom: 1px solid var(--border)44; white-space: nowrap; }
+.winRow  { }
+.lossRow { background: var(--red)06; }
+.exitReason { color: var(--muted); }
+
+/* ── 전략 레이블 툴팁 ────────────────────────────────── */
+.tooltipAnchor {
+  cursor: help;
+  text-decoration: underline dashed;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
+.tooltipFixed {
+  position: fixed;
+  width: 292px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  z-index: 9999;
+  box-shadow: 0 10px 36px rgba(0,0,0,.5);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text);
+  pointer-events: none;
+}
+.tooltipHeading {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+.tooltipBlock {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tooltipBlock:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.tooltipBlockTitle {
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.tooltipDesc {
+  color: var(--muted);
+  font-size: 11px;
+}
+.tooltipBullets {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+  padding-left: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── 주의 문구 ───────────────────────────────────────── */
+.disclaimer {
+  font-size: 11px; color: var(--muted); line-height: 1.6;
+  padding: 10px 14px; background: var(--bg3);
+  border-radius: 6px; border-left: 3px solid var(--border);
+}

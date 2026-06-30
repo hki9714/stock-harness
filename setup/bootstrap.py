@@ -89,6 +89,7 @@ DEFAULT_MODEL={ai.get('default_model', 'claude-sonnet-4-6')}
 WATCH_LIST={",".join(st['watch_list'])}
 VOLUME_SURGE_RATIO={st['volume_surge_ratio']}
 PRICE_SURGE_PCT={st['price_surge_pct']}
+PRICE_DROP_PCT={st.get('price_drop_pct', 5.0)}
 SENTIMENT_POSITIVE_THRESHOLD={st['sentiment_positive_threshold']}
 SENTIMENT_SURGE_COUNT={st['sentiment_surge_count']}
 CHECK_INTERVAL_MINUTES={st['check_interval_minutes']}

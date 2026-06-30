@@ -49,6 +49,7 @@ stock:
     - "005380"  # 현대차
   volume_surge_ratio: 3.0
   price_surge_pct: 5.0
+  price_drop_pct: 5.0
   sentiment_positive_threshold: 0.65
   sentiment_surge_count: 20
   check_interval_minutes: 30

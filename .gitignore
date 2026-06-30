@@ -25,3 +25,12 @@ Thumbs.db
 
 # 모델 캐시
 .cache/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# 임시/테스트 파일
+fix_patch.py
+backteest/
+analyzer/check.png

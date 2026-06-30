@@ -280,16 +280,34 @@ def _run_backtest_sync(
     except Exception:
         name = code
 
+    # ── 날짜 파싱 & 미래 예측 모드 감지 ─────────────────
+    today     = datetime.today()
+    today_str = today.strftime("%Y%m%d")
+    start_dt  = datetime.strptime(start, "%Y%m%d")
+    end_dt    = datetime.strptime(end,   "%Y%m%d")
+    is_future_mode = end_dt.date() > today.date()
+
     # ── 과거 패턴 학습용 데이터 ──────────────────────────
-    df = krx.get_market_ohlcv_by_date(start, end, code)
+    if is_future_mode:
+        # end가 미래 → 실제 데이터로 학습
+        if start_dt.date() < today.date():
+            # start~오늘 구간 활용
+            learn_start, learn_end = start, today_str
+        else:
+            # start도 미래 → 최근 2년(약 730일) 데이터로 학습
+            learn_start = (today - timedelta(days=730)).strftime("%Y%m%d")
+            learn_end   = today_str
+        df = krx.get_market_ohlcv_by_date(learn_start, learn_end, code)
+    else:
+        df = krx.get_market_ohlcv_by_date(start, end, code)
+
     if df is None or df.empty:
         return {"error": "해당 기간의 데이터가 없습니다. 날짜 범위를 확인하세요."}
     if len(df) < 10:
         return {"error": f"데이터가 부족합니다 ({len(df)}거래일). 더 긴 기간을 선택하세요."}
 
     # ── 현재가 조회 (시뮬레이션 기준점) ──────────────────
-    today_str    = datetime.today().strftime("%Y%m%d")
-    week_ago_str = (datetime.today() - timedelta(days=10)).strftime("%Y%m%d")
+    week_ago_str = (today - timedelta(days=10)).strftime("%Y%m%d")
     try:
         df_now = krx.get_market_ohlcv_by_date(week_ago_str, today_str, code)
         if df_now is not None and not df_now.empty:
@@ -326,13 +344,14 @@ def _run_backtest_sync(
     calmar        = round(annual_return / abs(mdd_pct / 100), 2) if mdd_pct != 0 else 0.0
 
     # ── 현재가 기준 시나리오 예측 ─────────────────────────
-    # 낙관: 연환산수익률 + 1σ / 기본: 연환산수익률 / 비관: 연환산수익률 − 1σ / 최악: 현재가 × (1 + MDD)
+    # 낙관: 연환산수익률 + 1σ / 기본: 연환산수익률 / 비관: 연환산수익률 − 1σ / 최악: 기간 비례 MDD
     def _proj(t_yr: float) -> dict:
         base  = (1 + annual_return) ** t_yr
         vol_t = annual_vol * math.sqrt(t_yr)
         bull  = base * (1 + vol_t)
-        bear  = base * (1 - vol_t)
-        worst = max(1 + mdd_pct / 100, 0.0)      # MDD 그대로 적용
+        bear  = max(base * (1 - vol_t), 0.0)   # 변동성 > 100% 시 음수 방지
+        # 최악: 기간이 짧을수록 전체 MDD 발생 가능성이 낮으므로 기간 비례 적용 (최대 1년치)
+        worst = max(base * (1 + (mdd_pct / 100) * min(t_yr, 1.0)), 0.0)
         return {
             "bull_pct":  round((bull  - 1) * 100, 1),
             "base_pct":  round((base  - 1) * 100, 1),
@@ -350,6 +369,9 @@ def _run_backtest_sync(
         "6m": _proj(6 / 12),
         "1y": _proj(1.0),
     }
+    if is_future_mode:
+        forecast_years = max((end_dt - today).days / 365.0, 1 / 12)
+        projections["target"] = _proj(forecast_years)
 
     # 수익률 곡선 (현재가 기준으로 정규화)
     equity_curve = [
@@ -368,12 +390,18 @@ def _run_backtest_sync(
         "hist_days":     n_days,
         "hist_total_return_pct": round(hist_total * 100, 2),
         "annual_return_pct":     round(annual_return * 100, 2),
+        "annual_return_note":    (
+            f"주의: {n_days}거래일({round(n_days/21):.0f}개월) — 연환산 수치 오차 가능"
+            if n_days < 126 else None
+        ),
         "annual_vol_pct":        round(annual_vol * 100, 2),
         "mdd_pct":               round(mdd_pct, 2),
         "sharpe":                round(sharpe, 2),
         "calmar":                round(calmar, 2),
         "projections":           projections,
         "equity_curve":          equity_curve,
+        "is_future_mode":        is_future_mode,
+        "target_date":           end_dt.strftime("%Y-%m-%d") if is_future_mode else None,
     }
 
     # ── 전략 1: 단순 보유 (패턴 학습 + 예측) ──────────────
@@ -422,11 +450,37 @@ def _run_backtest_sync(
         rets = [t["return_pct"] for t in trades]
         wins = [r for r in rets if r > 0]
 
+        # 복리 누적 수익률 (단순 합산이 아닌 곱연산)
+        compound = 1.0
+        for r in rets:
+            compound *= (1 + r / 100)
+        total_compound_pct = round((compound - 1) * 100, 2)
+
+        # 과거 시그널 거래 통계 기반 다음 진입 시나리오 예측
+        signal_projection = None
+        if trades:
+            avg_r   = sum(rets) / len(rets)
+            var_r   = sum((r - avg_r) ** 2 for r in rets) / len(rets)
+            std_r   = var_r ** 0.5
+            worst_r = min(rets)
+            signal_projection = {
+                "bull_pct":    round(avg_r + std_r, 1),
+                "base_pct":    round(avg_r, 1),
+                "bear_pct":    round(avg_r - std_r, 1),
+                "worst_pct":   round(worst_r, 1),
+                "bull_price":  int(max(current_price * (1 + (avg_r + std_r) / 100), 0)),
+                "base_price":  int(max(current_price * (1 + avg_r / 100), 0)),
+                "bear_price":  int(max(current_price * (1 + (avg_r - std_r) / 100), 0)),
+                "worst_price": int(max(current_price * (1 + worst_r / 100), 0)),
+                "hold_days":   hold_days,
+                "sample_count": len(trades),
+            }
+
         # 현재 시그널 여부 판단 (df_now 기반)
         signal_now = False
         try:
             df_chk = krx.get_market_ohlcv_by_date(
-                (datetime.today() - timedelta(days=14)).strftime("%Y%m%d"),
+                (today - timedelta(days=14)).strftime("%Y%m%d"),
                 today_str, code
             )
             if df_chk is not None and len(df_chk) >= 6:
@@ -441,12 +495,13 @@ def _run_backtest_sync(
 
         return {
             **common, "strategy": "시그널 진입",
-            "trade_count":      len(trades),
-            "win_rate":         round(len(wins) / len(trades) * 100, 1) if trades else 0.0,
-            "avg_return_pct":   round(sum(rets) / len(rets), 2) if rets else 0.0,
-            "total_return_pct": round(sum(rets), 2),
-            "signal_now":       signal_now,
-            "trades":           trades,
+            "trade_count":       len(trades),
+            "win_rate":          round(len(wins) / len(trades) * 100, 1) if trades else 0.0,
+            "avg_return_pct":    round(sum(rets) / len(rets), 2) if rets else 0.0,
+            "total_return_pct":  total_compound_pct,
+            "signal_now":        signal_now,
+            "signal_projection": signal_projection,
+            "trades":            trades,
         }
 
     return {"error": f"알 수 없는 전략: {strategy}"}
