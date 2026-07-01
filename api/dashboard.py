@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import APIRouter
 
 from crawler.stock_crawler import fetch_stock_snapshot, fetch_all_snapshots
-from crawler.naver_crawler import fetch_discussion_posts
+from crawler.naver_crawler import fetch_discussion_posts, fetch_fundamentals
 from analyzer.sentiment import analyze_posts
 from bot.telegram_bot import get_watch_set
 from models.config import settings
@@ -104,59 +104,22 @@ async def get_chart(code: str, days: int = 60):
 
 @router.get("/financial/{code}")
 async def get_financial(code: str):
-    """PER, PBR, ROE, EPS, 시가총액 반환"""
+    """PER, PBR, ROE, EPS, 시가총액 반환 (네이버 증권 크롤링)
+
+    KRX 전종목 통계 API(get_market_fundamental_by_ticker 등)가 로그인 세션을
+    요구하도록 바뀌어 항상 실패하므로, 네이버 증권 종목 페이지를 크롤링한다.
+    """
     try:
         loop = asyncio.get_event_loop()
 
-        def _fetch():
+        def _get_name():
             from pykrx import stock as krx
+            _n = krx.get_market_ticker_name(code)
+            return _n if isinstance(_n, str) and _n else code
 
-            _n   = krx.get_market_ticker_name(code)
-            name = _n if isinstance(_n, str) and _n else code
+        name = await loop.run_in_executor(None, _get_name)
+        data = await fetch_fundamentals(code)
 
-            # KRX API가 오늘 데이터를 반환하지 못할 경우 최근 5거래일까지 재시도
-            row = None
-            for delta in range(0, 6):
-                date = (datetime.today() - timedelta(days=delta)).strftime("%Y%m%d")
-                try:
-                    fund = krx.get_market_fundamental_by_ticker(date, market="ALL")
-                    if fund is not None and not fund.empty and code in fund.index:
-                        row = fund.loc[code]
-                        break
-                except Exception:
-                    continue
-
-            if row is None:
-                return None, name
-
-            cap = 0
-            for delta in range(0, 6):
-                date = (datetime.today() - timedelta(days=delta)).strftime("%Y%m%d")
-                try:
-                    cap_df = krx.get_market_cap_by_ticker(date, market="ALL")
-                    if cap_df is not None and not cap_df.empty and code in cap_df.index:
-                        cap = int(cap_df.loc[code, "시가총액"])
-                        break
-                except Exception:
-                    continue
-
-            def _safe(val):
-                try:
-                    return float(val) if val is not None else 0.0
-                except (TypeError, ValueError):
-                    return 0.0
-
-            return {
-                "per":        round(_safe(row.get("PER")), 2),
-                "pbr":        round(_safe(row.get("PBR")), 2),
-                "roe":        round(_safe(row.get("ROE")), 2),
-                "eps":        round(_safe(row.get("EPS")), 0),
-                "div_yield":  round(_safe(row.get("DIV")), 2),
-                "market_cap": cap,
-                "market_cap_trillion": round(cap / 1e12, 2),
-            }, name
-
-        data, name = await loop.run_in_executor(None, _fetch)
         if data is None:
             return {"error": "재무 데이터 없음"}
 

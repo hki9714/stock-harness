@@ -4,7 +4,6 @@ import ChartPage        from "./pages/ChartPage";
 import FinancialPage    from "./pages/FinancialPage";
 import SentimentPage    from "./pages/SentimentPage";
 import ScreeningPage    from "./pages/ScreeningPage";
-import DevConsolePage   from "./pages/DevConsolePage";
 import styles           from "./App.module.css";
 
 class ErrorBoundary extends Component {
@@ -40,7 +39,6 @@ const TABS = [
   { id: "financial",  label: "💰 재무제표" },
   { id: "sentiment",  label: "💬 감성 분석" },
   { id: "screening",  label: "🔍 스크리닝"  },
-  { id: "dev",        label: "🛠️ Dev Console" },
 ];
 
 export default function App() {
@@ -71,14 +69,13 @@ export default function App() {
       </header>
 
       {/* 본문 */}
-      <main className={`${styles.main} ${tab === "dev" ? styles.mainFull : ""}`}>
+      <main className={styles.main}>
         <ErrorBoundary key={tab}>
           {tab === "watchlist" && <WatchlistPage  onSelect={selectStock} />}
           {tab === "chart"     && <ChartPage      code={selectedCode} />}
           {tab === "financial" && <FinancialPage  code={selectedCode} />}
           {tab === "sentiment" && <SentimentPage  code={selectedCode} />}
           {tab === "screening" && <ScreeningPage  onSelect={selectStock} />}
-          {tab === "dev"       && <DevConsolePage />}
         </ErrorBoundary>
       </main>
     </div>

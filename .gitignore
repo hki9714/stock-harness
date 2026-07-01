@@ -34,3 +34,8 @@ frontend/node_modules/
 fix_patch.py
 backteest/
 analyzer/check.png
+
+# PyInstaller 빌드 산출물 (build_exe.bat 으로 재생성 가능)
+build/
+dist/
+build_log.txt

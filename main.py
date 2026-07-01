@@ -172,7 +172,7 @@ def _find_claude() -> str | None:
 
 
 def _build_system_prompt() -> str:
-    root = pathlib.Path(__file__).parent
+    root = pathlib.Path(sys._MEIPASS) if getattr(sys, "frozen", False) else pathlib.Path(__file__).parent
     lines = [
         '당신은 "Stock Harness" Python 주식 분석 프로젝트의 전담 개발 AI입니다.',
         '한국어로 응답하세요.',
@@ -313,8 +313,10 @@ async def get_ai_settings():
 # 반드시 API 엔드포인트 등록 후 마지막에 위치해야 함
 # ──────────────────────────────────────────
 
-DASH_DIR    = pathlib.Path(__file__).parent / "static" / "dashboard"
-CONSOLE_DIR = pathlib.Path(__file__).parent / "static" / "console"
+# PyInstaller 6+: 번들 데이터는 _MEIPASS(_internal/)에 위치
+_BASE_DIR   = pathlib.Path(sys._MEIPASS) if getattr(sys, "frozen", False) else pathlib.Path(__file__).parent
+DASH_DIR    = _BASE_DIR / "static" / "dashboard"
+CONSOLE_DIR = _BASE_DIR / "static" / "console"
 
 
 @app.get("/")

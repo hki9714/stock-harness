@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createChart }  from "lightweight-charts";
 import { getChart }     from "../api";
 import { getWatchlist } from "../api";
+import BacktestModal    from "./BacktestModal";
 import s from "./Page.module.css";
 
 const PERIODS = [
@@ -28,6 +29,7 @@ export default function ChartPage({ code: initCode }) {
   const [days,    setDays]    = useState(60);
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showBacktest, setShowBacktest] = useState(false);
 
   const chartRef = useRef(null);
   const rsiRef   = useRef(null);
@@ -159,8 +161,23 @@ export default function ChartPage({ code: initCode }) {
               {p.label}
             </button>
           ))}
+          <button
+            className={s.periodBtn}
+            onClick={() => setShowBacktest(true)}
+            disabled={!code}
+          >
+            📊 백테스트
+          </button>
         </div>
       </div>
+
+      {showBacktest && code && (
+        <BacktestModal
+          code={code}
+          name={displayName}
+          onClose={() => setShowBacktest(false)}
+        />
+      )}
 
       {loading && <div className={s.loading}>차트 로딩 중...</div>}
 

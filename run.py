@@ -90,4 +90,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stdout = sys.__stdout__
+        print("\n종료됨")
